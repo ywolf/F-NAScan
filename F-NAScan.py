@@ -42,19 +42,14 @@ class SendPingThr(threading.Thread):
         time.sleep(self.timeout)
 
 class Nscan:
-    def __init__(self, timeout=3, IPv6=False):
+    def __init__(self, timeout=3):
         self.timeout = timeout
-        self.IPv6 = IPv6
-
         self.__data = struct.pack('d', time.time())
         self.__id = os.getpid()
 
     @property
     def __icmpSocket(self):
-        if not self.IPv6:
-            Sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        else:
-            Sock = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
+        Sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
         return Sock
 
     def __inCksum(self, packet):
@@ -70,16 +65,10 @@ class Nscan:
 
     @property
     def __icmpPacket(self):
-        if not self.IPv6:
-            header = struct.pack('bbHHh', 8, 0, 0, self.__id, 0)
-        else:
-            header = struct.pack('BbHHh', 128, 0, 0, self.__id, 0)
+        header = struct.pack('bbHHh', 8, 0, 0, self.__id, 0)
         packet = header + self.__data
         chkSum = self.__inCksum(packet)
-        if not self.IPv6:
-            header = struct.pack('bbHHh', 8, 0, chkSum, self.__id, 0)
-        else:
-            header = struct.pack('BbHHh', 128, 0, chkSum, self.__id, 0)
+        header = struct.pack('bbHHh', 8, 0, chkSum, self.__id, 0)
         return header + self.__data
 
     def mPing(self, ipPool):
@@ -89,7 +78,6 @@ class Nscan:
         recvFroms = set()
         sendThr = SendPingThr(ipPool, packet, Sock, self.timeout)
         sendThr.start()
-        #tmp_iplist=[]
         while True:
             try:
                 ac_ip = Sock.recvfrom(1024)[1][0]
@@ -103,9 +91,13 @@ class Nscan:
                     break
         return recvFroms & ipPool
 def get_ac_ip(ip_list):
-    s = Nscan()
-    ipPool = set(ip_list)
-    return (s.mPing(ipPool))
+    try:
+        s = Nscan()
+        ipPool = set(ip_list)
+        return s.mPing(ipPool)
+    except:
+        print 'The current user permissions unable to send icmp packets'
+        return ip_list
 class ThreadNum(threading.Thread):
     def __init__(self,queue):
         threading.Thread.__init__(self)
@@ -349,5 +341,6 @@ Usage: python F-NAScan.py -h 192.168.1 [-p 21,80,3306] [-m 50] [-t 10] [-n]
             t_join(m_count)
             write_result()
     except Exception,e:
+        print e
         print msg
 
