@@ -298,6 +298,8 @@ def t_join(m_count):
         ac_count = threading.activeCount()
         if ac_count < m_count and ac_count == tmp_count:
             i+=1
+        else:
+            i = 0
         tmp_count = ac_count
         #print ac_count,queue.qsize()
         if (queue.empty() and threading.activeCount() <= 1) or i > 5:
