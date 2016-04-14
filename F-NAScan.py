@@ -267,7 +267,6 @@ def get_port_list(port):
         port_list = port.split(',')
     return port_list
 def write_result():
-    print 'w'
     re_json = []
     re_array = {}
     td = ''
