@@ -1,7 +1,7 @@
 #coding:utf-8
 #author:wolf@future-sec
 
-import getopt,sys,Queue,threading,socket,struct,urllib2,time,os,re,json,base64,cgi,array
+import getopt,sys,Queue,threading,socket,struct,urllib2,time,os,re,json,base64,cgi,array,ssl
 
 queue = Queue.Queue()
 mutex = threading.Lock()
@@ -10,6 +10,12 @@ port_list = []
 re_data = {}
 port_data = {}
 statistics = {}
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 class UnicodeStreamFilter:
     def __init__(self, target):
         self.target = target
@@ -115,15 +121,27 @@ class ThreadNum(threading.Thread):
                 if data:
                     if data <> 'NULL':
                         port_data[task_host + ":" + task_port] = urllib2.quote(data)
-                    #print task_host,task_port,' '.join(['0x%2x' % ord(x) for x in data])
                     server_type = server_discern(task_host,task_port,data)
                     if not server_type:
                         h_server,title = get_web_info(task_host,task_port)
-                        #print h_server,title
                         if title or h_server:server_type = 'web ' + title
                     if server_type:log('server',task_host,task_port,server_type.strip())
             except Exception,e:
                 continue
+def get_code(header,html):
+    try:
+        m = re.search(r'<meta.*?charset\=(.*?)"(>| |\/)',html, flags=re.I)
+        if m:
+            return m.group(1).replace('"','')
+    except:
+        pass
+    try:
+        if header.has_key('Content-Type'):
+            Content_Type = header['Content-Type']
+            m = re.search(r'.*?charset\=(.*?)(;|$)',Content_Type,flags=re.I)
+            if m:return m.group(1)
+    except:
+        pass
 def get_web_info(host,port):
     h_server,h_xpb,title_str,html = '','','',''
     try:
@@ -136,10 +154,14 @@ def get_web_info(host,port):
         return False,False
     if not header:return False,False
     try:
+        html_code = get_code(header,html).strip()
+        if html_code and len(html_code) < 12:
+            html = html.decode(html_code).encode('utf-8')
+    except:
+        pass
+    try:
         port_data[host + ":" + str(port)] = urllib2.quote(str(header) + "\r\n\r\n" + cgi.escape(html))
-    #if header.has_key('Server'):h_server=header['Server']
-    #if header.has_key('X-Powered-By'):h_xpb = header['X-Powered-By']
-        title = re.search(r'<title>(.*)</title>', html, flags=re.I)
+        title = re.search(r'<title>(.*?)</title>', html, flags=re.I|re.M)
         if title:title_str=title.group(1)
     except Exception,e:
         pass
