@@ -272,6 +272,7 @@ def get_ip_list(ip):
             print "-h wrong format"
     return ip_list
 def get_port_list(port):
+    port_list = []
     if '.ini' in port:
         port_config = open(port,'r')
         for port in port_config:
@@ -316,7 +317,7 @@ def t_join(m_count):
     tmp_count = 0
     i = 0
     while True:
-        time.sleep(1)
+        time.sleep(2)
         ac_count = threading.activeCount()
         if ac_count < m_count and ac_count == tmp_count:
             i+=1
